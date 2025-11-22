@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>For Juli</title>
+    
+    <!-- Tailwind CSS for layout and typography -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- GSAP for cinematic animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <!-- Phosphor Icons for elegant iconography -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-pink: #ffdde1;
+            --soft-blue: #ee9ca7;
+            --deep-violet: #667eea;
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.3);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Montserrat', sans-serif;
+            background-color: #0f0c29;
+            color: white;
+            touch-action: none; /* Prevent pull-to-refresh on mobile during games */
+        }
+
+        /* Cinematic Background */
+        #cinematic-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background: linear-gradient(120deg, #a18cd1 0%, #fbc2eb 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            z-index: -2;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Light Beams */
+        .light-beam {
+            position: absolute;
+            width: 150%;
+            height: 100vh;
+            background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.1), rgba(255,255,255,0));
+            transform: rotate(45deg);
+            filter: blur(60px);
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        /* Typography */
+        .poetic-text {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
+            line-height: 1.4;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Glassmorphism Card */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+
+        /* Particles */
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        /* Scene Management */
+        .scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            padding: 20px;
+            transition: opacity 1s;
+        }
+
+        .scene.active {
+            visibility: visible;
+        }
+
+        /* Game Layer */
+        #game-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20;
+            pointer-events: none; /* Enabled when game is active */
+            opacity: 0;
+            transition: opacity 0.5s;
+            display: none;
+        }
+
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Mobile D-Pad */
+        #d-pad {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            display: none; /* Shown only during maze game on mobile */
+            z-index: 30;
+        }
+        
+        .d-btn {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            user-select: none;
+        }
+        .d-up { top: 0; left: 50px; }
+        .d-down { bottom: 0; left: 50px; }
+        .d-left { top: 50px; left: 0; }
+        .d-right { top: 50px; right: 0; }
+
+        /* Custom Button Styles */
+        .choice-btn {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .choice-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 25px -5px rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Dynamic Background Elements -->
+    <div id="cinematic-bg"></div>
+    <div class="light-beam" style="top: -20%; left: -20%;"></div>
+    <div class="light-beam" style="bottom: -20%; right: -20%; animation-delay: -5s;"></div>
+    <div id="particle-container" class="fixed inset-0 pointer-events-none z-0"></div>
+
+    <!-- UI Controls -->
+    <div class="fixed top-6 right-6 z-50 flex gap-4">
+        <button id="music-toggle" class="glass-card w-10 h-10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors">
+            <i class="ph ph-speaker-slash text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Start Overlay -->
+    <div id="start-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-700">
+        <button id="start-btn" class="glass-card px-8 py-4 rounded-full text-white font-serif text-xl tracking-wider hover:bg-white/20 transition-all transform hover:scale-105 border border-white/40">
+            Begin Experience
+        </button>
+    </div>
+
+    <!-- Game Overlay -->
+    <div id="game-layer">
+        <div id="game-ui" class="absolute top-10 left-0 w-full text-center pointer-events-none z-30">
+            <h2 id="game-title" class="poetic-text text-3xl text-white mb-2 text-shadow-lg">Cupid's Arrow</h2>
+            <p id="game-instruction" class="text-white/80 font-light">Tap to shoot hearts!</p>
+            <div id="game-score" class="text-2xl font-bold text-pink-200 mt-2">0 / 5</div>
+        </div>
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- Mobile D-Pad for Maze -->
+        <div id="d-pad">
+            <div class="d-btn d-up" data-dir="up"><i class="ph ph-arrow-up"></i></div>
+            <div class="d-btn d-down" data-dir="down"><i class="ph ph-arrow-down"></i></div>
+            <div class="d-btn d-left" data-dir="left"><i class="ph ph-arrow-left"></i></div>
+            <div class="d-btn d-right" data-dir="right"><i class="ph ph-arrow-right"></i></div>
+        </div>
+    </div>
+
+    <!-- Continue Button -->
+    <div id="continue-container" class="fixed bottom-8 left-0 w-full flex justify-center z-[60] pointer-events-none opacity-0">
+        <button id="continue-btn" class="glass-card px-8 py-3 rounded-full text-white font-medium tracking-widest text-sm uppercase hover:bg-white/20 transition-all flex items-center gap-2 group shadow-lg border border-white/50">
+            <span>Continue</span>
+            <i class="ph ph-arrow-right group-hover:translate-x-1 transition-transform"></i>
+        </button>
+    </div>
+
+    <!-- Scene 1: The Arrival -->
+    <div id="scene-1" class="scene text-center">
+        <div class="max-w-2xl">
+            <p id="text-1" class="poetic-text text-3xl md:text-5xl text-white mb-8 leading-tight opacity-0 translate-y-4">
+                "Some feelings don’t rush."
+            </p>
+            <p id="text-1-sub" class="font-light text-lg md:text-xl text-white/90 opacity-0 translate-y-4">
+                They arrive quietly, like a soft thought you can’t ignore.
+            </p>
+        </div>
+    </div>
+
+    <!-- Scene 2: The Realisation -->
+    <div id="scene-2" class="scene text-center">
+        <div class="max-w-2xl">
+            <p id="text-2" class="poetic-text text-3xl md:text-5xl text-white mb-8 leading-tight opacity-0 scale-95">
+                "And sometimes, someone enters your world..."
+            </p>
+            <p id="text-2-sub" class="font-light text-lg md:text-xl text-white/90 opacity-0">
+                ...and changes the way moments feel.
+            </p>
+        </div>
+    </div>
+
+    <!-- Scene 3 & 4: Confession & Choice -->
+    <div id="scene-3" class="scene">
+        <div class="glass-card rounded-3xl p-6 md:p-10 max-w-lg w-full relative overflow-hidden border border-white/40 shadow-2xl mx-4">
+            <div class="absolute -top-20 -right-20 w-64 h-64 bg-pink-400/20 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-20 -left-20 w-64 h-64 bg-blue-400/20 rounded-full blur-3xl"></div>
+            
+            <h2 class="poetic-text text-2xl md:text-3xl mb-4 md:mb-6 text-white">Hey Juli,</h2>
+            
+            <div class="prose prose-invert text-white/90 font-light leading-relaxed mb-6 text-sm md:text-lg space-y-3">
+                <p>There’s a specific warmth in your personality that makes everything feel lighter, more real.</p>
+                <p>I realized I don’t just enjoy our conversations—I genuinely look forward to them.</p>
+                <p>So I wanted to be brave and ask... <span class="font-semibold text-pink-200">would you be my girlfriend?</span></p>
+                <p class="text-xs md:text-sm italic text-white/60 mt-2">No pressure, just honesty.</p>
+            </div>
+
+            <div id="choices" class="flex flex-col md:flex-row gap-3 mt-6 pt-4 border-t border-white/10 opacity-0">
+                <button onclick="handleResponse('yes')" class="choice-btn flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-pink-400/80 to-rose-400/80 text-white font-medium backdrop-blur-md border border-white/20 text-center group">
+                    <span class="group-hover:mr-2 transition-all">💗</span> Yes
+                </button>
+                <button onclick="handleResponse('friends')" class="choice-btn flex-1 py-3 px-6 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium backdrop-blur-md border border-white/20 text-center">
+                    🤍 Friends
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scene 5: Encouraging Close -->
+    <div id="scene-5" class="scene text-center">
+        <div class="max-w-xl glass-card p-10 rounded-2xl border border-white/20">
+            <div class="mb-6 text-5xl animate-bounce" id="final-emoji">✨</div>
+            <p class="poetic-text text-2xl md:text-4xl text-white mb-6">
+                "Courage looks good on honesty."
+            </p>
+            <p id="final-subtext" class="font-light text-lg text-white/80">
+                And whatever the answer, your heart chose bravery.
+            </p>
+            <div class="mt-8 flex justify-center gap-4 opacity-80 hover:opacity-100 transition-opacity">
+                <button onclick="copyLink()" class="text-sm text-white/60 hover:text-white flex items-center gap-2">
+                    <i class="ph ph-share-network"></i> Share this moment
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* --- GLOBAL STATE --- */
+        const state = {
+            isPlaying: false,
+            isMuted: true,
+            audioCtx: null,
+            currentStep: 0,
+            gameActive: false,
+            currentGameId: 0 // 1: Arrow, 2: Maze
+        };
+
+        /* --- AUDIO ENGINE --- */
+        const initAudio = () => {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            state.audioCtx = new AudioContext();
+            state.masterGain = state.audioCtx.createGain();
+            state.masterGain.connect(state.audioCtx.destination);
+            state.masterGain.gain.value = 0.15;
+        };
+
+        const playAmbientPad = () => {
+            if (!state.audioCtx || state.isMuted) return;
+            const freqs = [261.63, 329.63, 392.00, 493.88];
+            freqs.forEach((freq) => {
+                const osc = state.audioCtx.createOscillator();
+                const gain = state.audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                osc.detune.value = (Math.random() * 10) - 5;
+                
+                const lfo = state.audioCtx.createOscillator();
+                lfo.frequency.value = 0.1 + (Math.random() * 0.2);
+                const lfoGain = state.audioCtx.createGain();
+                lfoGain.gain.value = 0.05;
+                lfo.connect(lfoGain);
+                lfoGain.connect(gain.gain);
+                lfo.start();
+
+                osc.connect(gain);
+                gain.connect(state.masterGain);
+                osc.start();
+                gain.gain.setValueAtTime(0, state.audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.1, state.audioCtx.currentTime + 4);
+            });
+        };
+
+        const playSound = (type) => {
+            if (state.isMuted || !state.audioCtx) return;
+            const osc = state.audioCtx.createOscillator();
+            const gain = state.audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(state.masterGain);
+            
+            const now = state.audioCtx.currentTime;
+            
+            if (type === 'shoot') {
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start();
+                osc.stop(now + 0.2);
+            } else if (type === 'hit') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(880, now); // A5
+                osc.frequency.exponentialRampToValueAtTime(1760, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.start();
+                osc.stop(now + 0.4);
+            } else if (type === 'bounce') {
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.linearRampToValueAtTime(300, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start();
+                osc.stop(now + 0.2);
+            }
+        };
+
+        const toggleMute = () => {
+            const btn = document.getElementById('music-toggle');
+            const icon = btn.querySelector('i');
+            
+            if (state.isMuted) {
+                state.isMuted = false;
+                if (state.audioCtx.state === 'suspended') state.audioCtx.resume();
+                playAmbientPad();
+                icon.classList.replace('ph-speaker-slash', 'ph-speaker-high');
+                gsap.to(btn, { backgroundColor: 'rgba(255,255,255,0.3)', duration: 0.5 });
+            } else {
+                state.isMuted = true;
+                state.masterGain.gain.setTargetAtTime(0, state.audioCtx.currentTime, 0.5);
+                icon.classList.replace('ph-speaker-high', 'ph-speaker-slash');
+                gsap.to(btn, { backgroundColor: 'rgba(255,255,255,0.15)', duration: 0.5 });
+            }
+        };
+
+        /* --- GAME ENGINE --- */
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        let gameLoopId;
+        let score = 0;
+        
+        // Game 1 Variables
+        let arrows = [];
+        let targets = [];
+        let bowAngle = 0;
+        
+        // Game 2 Variables
+        let player = { x: 1, y: 1, size: 0.5 }; // Grid coords
+        let mazeGrid = [];
+        let collectibles = [];
+        let obstacles = [];
+        const TILE_SIZE = 40;
+        
+        const resizeCanvas = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- GAME 1: CUPID'S ARROW ---
+        const initGame1 = () => {
+            resizeCanvas();
+            state.currentGameId = 1;
+            state.gameActive = true;
+            score = 0;
+            arrows = [];
+            targets = [];
+            
+            document.getElementById('game-layer').style.display = 'block';
+            document.getElementById('game-layer').style.pointerEvents = 'auto';
+            document.getElementById('game-layer').style.opacity = 1;
+            document.getElementById('game-title').innerText = "Cupid's Arrow";
+            document.getElementById('game-instruction').innerText = "Tap anywhere to shoot 5 hearts!";
+            document.getElementById('game-score').innerText = "0 / 5";
+            
+            // Input for shooting
+            canvas.addEventListener('pointerdown', shootArrow);
+            
+            gameLoop();
+        };
+
+        const shootArrow = (e) => {
+            if (!state.gameActive || state.currentGameId !== 1) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const originX = canvas.width / 2;
+            const originY = canvas.height - 50;
+            
+            const angle = Math.atan2(y - originY, x - originX);
+            const velocity = 15;
+            
+            arrows.push({
+                x: originX,
+                y: originY,
+                vx: Math.cos(angle) * velocity,
+                vy: Math.sin(angle) * velocity,
+                angle: angle
+            });
+            playSound('shoot');
+        };
+
+        const updateGame1 = () => {
+            // Spawn Targets
+            if (Math.random() < 0.03) {
+                targets.push({
+                    x: Math.random() < 0.5 ? -50 : canvas.width + 50,
+                    y: Math.random() * (canvas.height * 0.6) + 50,
+                    size: 30,
+                    speed: (Math.random() * 2 + 1) * (Math.random() < 0.5 ? 1 : -1),
+                    type: Math.random() > 0.8 ? 'gold' : 'pink'
+                });
+            }
+
+            // Update Arrows
+            for (let i = arrows.length - 1; i >= 0; i--) {
+                let a = arrows[i];
+                a.x += a.vx;
+                a.y += a.vy;
+                
+                // Check Collision
+                for (let j = targets.length - 1; j >= 0; j--) {
+                    let t = targets[j];
+                    const dist = Math.hypot(a.x - t.x, a.y - t.y);
+                    if (dist < t.size + 10) {
+                        // Hit!
+                        createExplosion(t.x, t.y, t.type === 'gold' ? '#FFD700' : '#ff6b6b');
+                        playSound('hit');
+                        targets.splice(j, 1);
+                        arrows.splice(i, 1);
+                        score++;
+                        document.getElementById('game-score').innerText = `${score} / 5`;
+                        
+                        if (score >= 5) {
+                            endGame1();
+                        }
+                        break;
+                    }
+                }
+                
+                // Remove off-screen arrows
+                if (a.x < 0 || a.x > canvas.width || a.y < 0 || a.y > canvas.height) {
+                    if(arrows[i]) arrows.splice(i, 1);
+                }
+            }
+
+            // Update Targets
+            for (let i = targets.length - 1; i >= 0; i--) {
+                let t = targets[i];
+                t.x += (t.x < canvas.width/2) ? Math.abs(t.speed) : -Math.abs(t.speed);
+                if ((t.speed > 0 && t.x > canvas.width + 100) || (t.speed < 0 && t.x < -100)) {
+                    targets.splice(i, 1);
+                }
+            }
+        };
+
+        const drawGame1 = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Bow Position
+            ctx.font = "40px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("🏹", canvas.width / 2, canvas.height - 20);
+
+            // Draw Arrows
+            ctx.fillStyle = "white";
+            arrows.forEach(a => {
+                ctx.save();
+                ctx.translate(a.x, a.y);
+                ctx.rotate(a.angle);
+                ctx.font = "24px Arial";
+                ctx.fillText("💘", 0, 0);
+                ctx.restore();
+            });
+
+            // Draw Targets
+            targets.forEach(t => {
+                ctx.font = `${t.size}px Arial`;
+                ctx.fillText(t.type === 'gold' ? "💛" : "💖", t.x, t.y);
+            });
+        };
+
+        const endGame1 = () => {
+            state.gameActive = false;
+            canvas.removeEventListener('pointerdown', shootArrow);
+            
+            // Success Animation
+            const msg = document.getElementById('game-title');
+            msg.innerText = "Amazing!";
+            gsap.to(msg, { scale: 1.5, duration: 0.5, yoyo: true, repeat: 1 });
+            
+            setTimeout(() => {
+                initGame2();
+            }, 2000);
+        };
+
+        // --- GAME 2: HEART DASH MAZE ---
+        const initGame2 = () => {
+            state.currentGameId = 2;
+            state.gameActive = true;
+            score = 0;
+            player = { x: 1, y: 1 };
+            
+            document.getElementById('game-title').innerText = "Heart Dash";
+            document.getElementById('game-instruction').innerText = "Collect 3 stars to exit!";
+            document.getElementById('game-score').innerText = "0 / 3";
+            
+            // Show D-Pad on touch devices
+            if('ontouchstart' in window) {
+                document.getElementById('d-pad').style.display = 'block';
+            }
+
+            // Simple 10x10 Maze (1=Wall, 0=Path, 9=Exit)
+            // Generated simply for this demo
+            const mapLayout = [
+                [1,1,1,1,1,1,1,1,1,1],
+                [1,0,0,0,1,0,0,0,3,1],
+                [1,0,1,0,1,0,1,1,0,1],
+                [1,0,1,0,0,0,0,0,0,1],
+                [1,3,1,1,1,1,1,1,0,1],
+                [1,0,0,0,0,0,1,0,0,1],
+                [1,0,1,1,1,0,1,0,1,1],
+                [1,0,3,0,0,0,0,0,0,1],
+                [1,1,1,1,1,1,0,1,9,1],
+                [1,1,1,1,1,1,1,1,1,1]
+            ];
+            
+            mazeGrid = mapLayout;
+            
+            // Parse Collectibles
+            collectibles = [];
+            for(let y=0; y<10; y++) {
+                for(let x=0; x<10; x++) {
+                    if(mazeGrid[y][x] === 3) {
+                        collectibles.push({x, y});
+                        mazeGrid[y][x] = 0; // Clear from grid
+                    }
+                }
+            }
+            
+            // Obstacle (Cloud)
+            obstacles = [{x: 5, y: 5, dx: 1}];
+
+            gameLoop();
+        };
+
+        const movePlayer = (dx, dy) => {
+            if (!state.gameActive || state.currentGameId !== 2) return;
+            
+            const nextX = player.x + dx;
+            const nextY = player.y + dy;
+            
+            // Check Walls
+            if (mazeGrid[nextY] && mazeGrid[nextY][nextX] === 1) return;
+            
+            // Check Exit
+            if (mazeGrid[nextY][nextX] === 9) {
+                if (score >= 3) {
+                    endGame2();
+                    return;
+                } else {
+                    // Shake screen slightly - need more hearts
+                    gsap.to("#game-canvas", {x: 5, duration: 0.1, yoyo: true, repeat: 3});
+                    return;
+                }
+            }
+
+            player.x = nextX;
+            player.y = nextY;
+            
+            // Check Collectibles
+            for(let i=collectibles.length-1; i>=0; i--) {
+                let c = collectibles[i];
+                if(c.x === player.x && c.y === player.y) {
+                    collectibles.splice(i, 1);
+                    score++;
+                    playSound('hit');
+                    document.getElementById('game-score').innerText = `${score} / 3`;
+                    createExplosion(player.x * getTileSize() + getTileSize()/2 + getOffsetX(), player.y * getTileSize() + getTileSize()/2 + getOffsetY(), '#FFFF00');
+                    if(score === 3) {
+                         document.getElementById('game-instruction').innerText = "Go to the Exit (🏁)!";
+                    }
+                }
+            }
+        };
+
+        const updateGame2 = () => {
+            // Simple obstacle patrol
+            obstacles.forEach(o => {
+                if (Math.random() < 0.05) {
+                    let nextX = o.x + o.dx;
+                    if (mazeGrid[o.y][nextX] === 1) {
+                        o.dx *= -1; // Bounce
+                    } else {
+                        o.x += o.dx;
+                    }
+                }
+                // Player collision with obstacle
+                if (Math.round(o.x) === player.x && o.y === player.y) {
+                     player.x = 1; player.y = 1; // Reset pos
+                     playSound('bounce');
+                     gsap.to("#game-canvas", {x: 10, duration: 0.1, yoyo: true, repeat: 3});
+                }
+            });
+        };
+
+        const getTileSize = () => Math.min(canvas.width, canvas.height) / 12;
+        const getOffsetX = () => (canvas.width - (10 * getTileSize())) / 2;
+        const getOffsetY = () => (canvas.height - (10 * getTileSize())) / 2;
+
+        const drawGame2 = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const tileSize = getTileSize();
+            const offX = getOffsetX();
+            const offY = getOffsetY();
+            
+            // Draw Grid
+            for(let y=0; y<10; y++) {
+                for(let x=0; x<10; x++) {
+                    const cell = mazeGrid[y][x];
+                    const px = offX + x * tileSize;
+                    const py = offY + y * tileSize;
+                    
+                    if(cell === 1) {
+                        // Wall (Cloud)
+                        ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+                        ctx.beginPath();
+                        ctx.roundRect(px + 2, py + 2, tileSize - 4, tileSize - 4, 8);
+                        ctx.fill();
+                    } else if (cell === 9) {
+                        // Exit
+                        ctx.font = `${tileSize*0.7}px Arial`;
+                        ctx.fillText("🏁", px + tileSize/2, py + tileSize/1.5);
+                    }
+                }
+            }
+            
+            // Draw Collectibles
+            collectibles.forEach(c => {
+                ctx.font = `${tileSize*0.6}px Arial`;
+                ctx.fillText("⭐", offX + c.x * tileSize + tileSize/2, offY + c.y * tileSize + tileSize/1.5);
+            });
+            
+            // Draw Obstacles
+            obstacles.forEach(o => {
+                ctx.font = `${tileSize*0.6}px Arial`;
+                ctx.fillText("☁️", offX + o.x * tileSize + tileSize/2, offY + o.y * tileSize + tileSize/1.5);
+            });
+            
+            // Draw Player
+            ctx.font = `${tileSize*0.7}px Arial`;
+            ctx.fillText("🏃", offX + player.x * tileSize + tileSize/2, offY + player.y * tileSize + tileSize/1.5);
+        };
+
+        const endGame2 = () => {
+            state.gameActive = false;
+            document.getElementById('d-pad').style.display = 'none';
+            cancelAnimationFrame(gameLoopId);
+            
+            // Fade out game layer
+            gsap.to('#game-layer', {
+                opacity: 0,
+                duration: 1,
+                onComplete: () => {
+                    document.getElementById('game-layer').style.display = 'none';
+                    playScene3();
+                }
+            });
+        };
+
+        /* --- SHARED UTILS --- */
+        let particles = [];
+        const createExplosion = (x, y, color) => {
+            for(let i=0; i<10; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1,
+                    color: color
+                });
+            }
+        };
+        
+        const gameLoop = () => {
+            if (!state.gameActive) return;
+            
+            if (state.currentGameId === 1) {
+                updateGame1();
+                drawGame1();
+            } else {
+                updateGame2();
+                drawGame2();
+            }
+            
+            // Render particles
+            particles.forEach((p, i) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.05;
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+                ctx.fill();
+                if(p.life <= 0) particles.splice(i, 1);
+            });
+            ctx.globalAlpha = 1;
+            
+            gameLoopId = requestAnimationFrame(gameLoop);
+        };
+
+        /* --- SCENE CONTROL --- */
+        const nextStep = () => {
+            hideContinue();
+            
+            if (state.currentStep === 1) {
+                gsap.to('#scene-1', { 
+                    opacity: 0, 
+                    duration: 1.5, 
+                    onComplete: () => {
+                        document.getElementById('scene-1').style.visibility = 'hidden';
+                        playScene2();
+                    } 
+                });
+            } else if (state.currentStep === 2) {
+                gsap.to('#scene-2', { 
+                    opacity: 0, 
+                    duration: 1.5, 
+                    onComplete: () => {
+                        document.getElementById('scene-2').style.visibility = 'hidden';
+                        // START MINI GAMES
+                        initGame1();
+                    } 
+                });
+            }
+        };
+
+        const showContinue = () => {
+            const btn = document.getElementById('continue-container');
+            btn.style.pointerEvents = 'auto';
+            gsap.to(btn, { opacity: 1, duration: 1, delay: 0.5 });
+        };
+
+        const hideContinue = () => {
+            const btn = document.getElementById('continue-container');
+            btn.style.pointerEvents = 'none';
+            gsap.to(btn, { opacity: 0, duration: 0.3 });
+        };
+
+        const playScene1 = () => {
+            state.currentStep = 1;
+            const tl = gsap.timeline({ onComplete: showContinue });
+            tl.set('#scene-1', { visibility: 'visible', opacity: 1 })
+              .to('#text-1', { opacity: 1, y: 0, duration: 2, ease: 'power2.out' })
+              .to('#text-1-sub', { opacity: 1, y: 0, duration: 2, delay: 0.5 }, "-=1");
+        };
+
+        const playScene2 = () => {
+            state.currentStep = 2;
+            const tl = gsap.timeline({ onComplete: showContinue });
+            tl.set('#scene-2', { visibility: 'visible', opacity: 1 })
+              .to('#text-2', { opacity: 1, scale: 1, duration: 2.5, ease: 'power2.out' })
+              .to('#text-2-sub', { opacity: 1, duration: 2 }, "-=1.5");
+        };
+
+        const playScene3 = () => {
+            state.currentStep = 3;
+            const tl = gsap.timeline();
+            tl.set('#scene-3', { visibility: 'visible', opacity: 1 })
+              .from('.glass-card', { y: 50, opacity: 0, duration: 1.5, ease: 'back.out(1.2)' })
+              .to('#choices', { opacity: 1, y: 0, duration: 1, delay: 4 });
+        };
+
+        const handleResponse = (choice) => {
+            const tl = gsap.timeline();
+            const btnIndex = choice === 'yes' ? 0 : 1;
+            const btn = document.querySelectorAll('.choice-btn')[btnIndex];
+            
+            tl.to(btn, { scale: 1.1, duration: 0.1, yoyo: true, repeat: 1 })
+              .to('#scene-3', { opacity: 0, y: -20, duration: 1, delay: 0.3, onComplete: () => document.getElementById('scene-3').style.visibility = 'hidden' });
+
+            const finalEmoji = choice === 'yes' ? '💖' : '✨';
+            document.getElementById('final-emoji').innerText = finalEmoji;
+            
+            tl.set('#scene-5', { visibility: 'visible', opacity: 1 })
+              .from('#scene-5 .glass-card', { scale: 0.9, opacity: 0, duration: 1.5, ease: 'power2.out' });
+
+            if (!state.isMuted && state.audioCtx) playSound('hit'); // Reusing hit sound as chime
+        };
+
+        const copyLink = () => {
+            const btn = document.querySelector('#scene-5 button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i class="ph ph-check"></i> Link Copied`;
+            setTimeout(() => btn.innerHTML = originalText, 2000);
+        };
+
+        /* --- START FUNCTION --- */
+        const startExperience = () => {
+            document.getElementById('start-overlay').style.opacity = '0';
+            setTimeout(() => document.getElementById('start-overlay').remove(), 700);
+            
+            // Initialize Audio context (starts muted)
+            initAudio();
+            
+            // Start the first scene manually
+            playScene1();
+        };
+
+        /* --- INPUT HANDLING --- */
+        window.addEventListener('keydown', (e) => {
+            if (state.currentGameId === 2 && state.gameActive) {
+                if(e.key === 'ArrowUp' || e.key === 'w') movePlayer(0, -1);
+                if(e.key === 'ArrowDown' || e.key === 's') movePlayer(0, 1);
+                if(e.key === 'ArrowLeft' || e.key === 'a') movePlayer(-1, 0);
+                if(e.key === 'ArrowRight' || e.key === 'd') movePlayer(1, 0);
+            }
+        });
+
+        // D-Pad Events
+        document.querySelectorAll('.d-btn').forEach(btn => {
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault(); // Prevent zoom
+                const dir = btn.dataset.dir;
+                if(dir === 'up') movePlayer(0, -1);
+                if(dir === 'down') movePlayer(0, 1);
+                if(dir === 'left') movePlayer(-1, 0);
+                if(dir === 'right') movePlayer(1, 0);
+            });
+        });
+
+        // Particles Background
+        const createParticle = () => {
+            const container = document.getElementById('particle-container');
+            const particle = document.createElement('div');
+            const isHeart = Math.random() > 0.6;
+            particle.innerHTML = isHeart ? '❤' : '✨';
+            particle.className = 'particle text-white/40 absolute';
+            
+            const startX = Math.random() * window.innerWidth;
+            const startY = window.innerHeight + 20;
+            
+            particle.style.left = `${startX}px`;
+            particle.style.top = `${startY}px`;
+            particle.style.fontSize = `${10 + Math.random() * 20}px`;
+            
+            container.appendChild(particle);
+            
+            gsap.to(particle, {
+                y: -window.innerHeight - 100,
+                x: (Math.random() - 0.5) * 100,
+                rotation: Math.random() * 360,
+                opacity: 0.6,
+                duration: 10 + Math.random() * 10,
+                ease: 'none',
+                onComplete: () => particle.remove()
+            });
+        };
+
+        // Setup Listeners
+        document.getElementById('start-btn').addEventListener('click', startExperience);
+        document.getElementById('continue-btn').addEventListener('click', nextStep);
+        document.getElementById('music-toggle').addEventListener('click', toggleMute);
+        
+        // Background Animations
+        setInterval(createParticle, 600);
+        gsap.to('.light-beam', {
+            rotation: '+=360',
+            duration: 60,
+            repeat: -1,
+            ease: 'linear'
+        });
+
+    </script>
+</body>
+</html>
